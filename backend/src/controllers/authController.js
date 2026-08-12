@@ -25,10 +25,15 @@ function issueRefreshToken(userId) {
 }
 
 function setRefreshCookie(res, token) {
+  const isProd = process.env.NODE_ENV === 'production';
   res.cookie('refresh_token', token, {
     httpOnly: true, // JavaScript on the page can never read this cookie
-    secure: process.env.NODE_ENV === 'production', // HTTPS-only in production
-    sameSite: 'strict', // never sent on cross-site requests, blocks CSRF-style theft
+    secure: isProd, // HTTPS-only in production (required for sameSite: 'none')
+    // 'none' is required when the frontend (GitHub Pages) and backend (Render/Railway)
+    // live on different domains, so the browser will still send this cookie on
+    // cross-site requests. 'strict' would silently block it in that setup.
+    // Locally (frontend and backend both on localhost), 'lax' works fine.
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000,
     path: '/api/auth',
   });
